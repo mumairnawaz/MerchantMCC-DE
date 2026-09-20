@@ -8,6 +8,11 @@ venv/
 
 # Environment / secrets
 .env
+*.key
+*.pem
+*credentials*
+*secret*
+local_settings.py
 
 # Generated data (not source-controlled)
 data/bronze/*
@@ -20,6 +25,10 @@ outbox/*
 !outbox/.gitkeep
 reports/*
 !reports/.gitkeep
+
+# Logs
+logs/
+*.log
 
 # IDE
 .vscode/
