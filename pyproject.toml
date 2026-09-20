@@ -1,0 +1,9 @@
+[project]
+name = "merchantmcc-de"
+version = "0.1.0"
+description = "MerchantMCC DE — Merchant, MCC & Transaction Data Engineering Platform"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
