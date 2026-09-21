@@ -18,9 +18,11 @@ local_settings.py
 data/bronze/*
 data/silver/*
 data/gold/*
+data/watermarks/*
 !data/bronze/.gitkeep
 !data/silver/.gitkeep
 !data/gold/.gitkeep
+!data/watermarks/.gitkeep
 outbox/*
 !outbox/.gitkeep
 reports/*

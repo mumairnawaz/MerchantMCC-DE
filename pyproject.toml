@@ -3,7 +3,11 @@ name = "merchantmcc-de"
 version = "0.1.0"
 description = "MerchantMCC DE — Merchant, MCC & Transaction Data Engineering Platform"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["requests>=2.31"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -1,0 +1,68 @@
+{
+  "mcc": {
+    "source_type": "reference",
+    "url": "https://raw.githubusercontent.com/greggles/mcc-codes/main/mcc_codes.csv",
+    "format": "csv"
+  },
+  "country": {
+    "source_type": "reference",
+    "url": "https://raw.githubusercontent.com/mledoze/countries/master/dist/countries.json",
+    "format": "json",
+    "note": "Switched from restcountries.com v3.1 on 2026-09-20 after it was deprecated in favor of a paid v5 API requiring an account/API key."
+  },
+  "currency": {
+    "source_type": "live_api",
+    "url": "https://api.frankfurter.dev/v1/latest",
+    "format": "json",
+    "date_range_url_template": "https://api.frankfurter.dev/v1/{start}..{end}",
+    "date_format": "YYYY-MM-DD",
+    "initial_backfill_days": 90,
+    "incremental_note": "IMPLEMENTED (Step 5). Watermark = MAX(date) actually observed in rates (never a requested-but-unpublished date); next run requests {watermark+1}..{today} via date_range_url_template. Both the initial backfill and incremental loads use the range endpoint — plain 'url' (/latest) is kept here as documentation of the source's simplest endpoint but is not called by run() anymore. Verified live (Phase: FinPay source realignment): Frankfurter silently clips a requested range to the dates it actually has (e.g. weekends), rather than erroring or padding — confirmed by requesting 2026-09-17..2026-09-19 and receiving end_date=2026-09-18."
+  },
+  "merchant_osm": {
+    "source_type": "live_api",
+    "url": "https://overpass-api.de/api/interpreter",
+    "format": "json",
+    "area_name": "Leeds city centre, UK (small extract)",
+    "bbox": [53.7965, -1.5486, 53.8010, -1.5390],
+    "query": "[out:json][timeout:25];(node[\"shop\"](53.7965,-1.5486,53.8010,-1.5390);node[\"amenity\"~\"^(restaurant|cafe|fast_food|bank|pharmacy)$\"](53.7965,-1.5486,53.8010,-1.5390););out body;",
+    "request_timeout_seconds": 60,
+    "incremental_query_template": "[out:json][timeout:60];(node[\"shop\"](53.7965,-1.5486,53.8010,-1.5390);node[\"amenity\"~\"^(restaurant|cafe|fast_food|bank|pharmacy)$\"](53.7965,-1.5486,53.8010,-1.5390);)->.all;node.all(newer:\"{watermark}\");out meta;",
+    "incremental_request_timeout_seconds": 60,
+    "incremental_note": "IMPLEMENTED (Step 4). Same bbox/shop/amenity scope as the full query, restructured into Overpass QL's required set-then-filter grammar for `newer:` (a single-statement chained filter is not valid QL). Verified live: needs a >=60s Overpass QL timeout (25s -> HTTP 504) and the centralized User-Agent (absent -> HTTP 406). Uses `out meta;` to capture timestamp/version/changeset per element.",
+    "user_agent_note": "User-Agent is sourced from the centralized src/ingestion/settings.py, not from this file — verified live: a request without one returns HTTP 406."
+  },
+  "iso_currency": {
+    "source_type": "reference",
+    "url": "https://raw.githubusercontent.com/datasets/currency-codes/main/data/codes-all.csv",
+    "format": "csv",
+    "license": "Public Domain Dedication and License (PDDL)",
+    "note": "AlphabeticCode repeats once per entity in the raw file (expected, not a defect) — Silver will dedupe to one row per currency."
+  },
+  "card_issuer": {
+    "source_type": "reference",
+    "url": "https://raw.githubusercontent.com/venelinkochev/bin-list-data/master/bin-list-data.csv",
+    "format": "csv",
+    "license": "CC BY 4.0",
+    "attribution": "BIN List Data (venelinkochev/bin-list-data), CC BY 4.0",
+    "note": "~374,788 rows / ~26MB, full dataset ingested per 2026-09-20 approval. ~48% of rows have a blank Issuer — expected, not a parse failure.",
+    "request_timeout_seconds": 120
+  },
+  "gleif": {
+    "source_type": "live_api",
+    "url": "https://api.gleif.org/api/v1/lei-records",
+    "format": "json",
+    "page_size": 200,
+    "jurisdiction_filter": "GB",
+    "entity_status_filter": "ACTIVE",
+    "registration_status_filter": "ISSUED",
+    "sort": "lei",
+    "initial_load_max_records": 10000,
+    "initial_load_max_pages": 50,
+    "incremental_filter_field": "registration.lastUpdateDate",
+    "incremental_filter_operator": ">=",
+    "scope_note": "LOCKED (Step 6E). Initial load: a deterministic 10,000-record (50-page at page[size]=200) portfolio-scoped extract from the GB + ACTIVE + ISSUED population (confirmed 95,078 total, verified live in Step 6B and cross-confirmed in Step 6D), ordered by sort=lei for reproducibility. This is NOT complete GB coverage and NOT a statistically representative sample. Incremental runs are NOT subject to this cap and paginate through the complete matching incremental result set.",
+    "sampling_limitation": "sort=lei is deterministic (reproducible paging across runs) but NOT statistically representative: LEI codes encode the issuing Local Operating Unit (LOU) in their prefix, so ascending-LEI order clusters records by issuing LOU rather than by any business attribute — verified live in Step 6D (5 consecutive sorted records shared a common leading-character pattern). Must never be described as 'all UK entities', 'all GB entities', 'complete GB coverage', or 'representative statistical sampling'.",
+    "verification_note": "Combined filters verified live in Step 6B (HTTP 200, total=95,078, page[size]=1). sort=lei verified live in Step 6D (HTTP 200, deterministic ascending order confirmed across 5 records, total cross-confirmed as 95,078 at page[size]=5 via lastPage=19,016)."
+  }
+}
