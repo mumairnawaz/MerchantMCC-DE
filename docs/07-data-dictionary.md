@@ -60,5 +60,7 @@ that ingestion code producing them exists in this repository yet (see
 | source_provider | DERIVED (constant, "gleif") |
 | ingestion_timestamp | DERIVED (pipeline-generated) |
 
+> **Note (Step 6F real-run finding)**: the GLEIF API request uses `filter[entity.jurisdiction]=GB`. The real initial extraction returned `jurisdiction` values including `GB`, `GB-SCT`, and `GB-NIR`. Any Silver-layer field derived from this must not assume the value is literally `GB`.
+
 All three contracts will be verified field-by-field against real ingestion output once that
 ingestion code is published, per the phased roadmap in [20-roadmap.md](20-roadmap.md).

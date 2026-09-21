@@ -100,7 +100,7 @@ Two status dimensions are used throughout this document and must not be confused
 | Gold Usage | Issuer/program-owner reporting marts |
 | License | GLEIF open data terms — free reuse |
 | Attribution | GLEIF |
-| Known Limitations | Full pool is very large; any ingestion must filter, never bulk-load |
+| Known Limitations | Full pool is very large; any ingestion must filter, never bulk-load. The GLEIF API request uses `filter[entity.jurisdiction]=GB`; the real initial extraction (10,000 records, Step 6F) showed the API returns records whose `entity.jurisdiction` values include `GB`, `GB-SCT`, and `GB-NIR` — downstream logic must not assume the returned jurisdiction value is literally `GB` for every record. |
 | Verification Status | VERIFIED |
 
 ## 4. MCC Reference Data

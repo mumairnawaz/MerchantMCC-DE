@@ -26,6 +26,11 @@ All-or-nothing per run: every required page is fetched successfully before anyth
 is written to Bronze. An HTTP failure on any page aborts the whole run with no
 partial Bronze write and no watermark change — there is no partial/incremental
 Bronze write within a single run.
+
+Real-run finding (Step 6F): filter[entity.jurisdiction]=GB does not guarantee every
+returned record's entity.jurisdiction is literally "GB" — the first real 10,000-record
+extraction returned GB (9,949), GB-SCT (34), and GB-NIR (17). Code and downstream
+consumers must not assume literal equality.
 """
 
 import json
