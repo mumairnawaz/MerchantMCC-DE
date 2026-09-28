@@ -141,6 +141,33 @@ CDC event lifecycle, and consolidated data quality flow — plus 5 use-case diag
 Python · PostgreSQL · Debezium · Kafka · PySpark · DuckDB · dbt · Apache Airflow ·
 Docker · Parquet · Power BI (PBIP/TMDL/PBIR)
 
+## Source → Implementation → Evidence
+
+Every layer below is traceable from its real-world input to the code that processes it to
+the proof that it runs. Every path is a real, current path in this repository.
+
+| Layer | Source / Input | Technology | Repository Implementation | Output | Evidence |
+|---|---|---|---|---|---|
+| API ingestion — merchants | OpenStreetMap Overpass | Python/requests | [`src/ingestion/merchant_osm.py`](src/ingestion/merchant_osm.py) → [`src/silver/merchant.py`](src/silver/merchant.py) | API Bronze → API Silver | Implementation present; GUI evidence not captured — [`docs/assets/screenshots/api/`](docs/assets/screenshots/api/) |
+| API ingestion — FX rates | Frankfurter | Python/requests | [`src/ingestion/currency.py`](src/ingestion/currency.py) → [`src/silver/fx_rate.py`](src/silver/fx_rate.py) | API Bronze → API Silver | Implementation present; GUI evidence not captured — [`docs/assets/screenshots/api/`](docs/assets/screenshots/api/) |
+| API ingestion — legal entities | GLEIF | Python/requests | [`src/ingestion/gleif.py`](src/ingestion/gleif.py) → [`src/silver/legal_entity.py`](src/silver/legal_entity.py) | API Bronze → API Silver | Implementation present; GUI evidence not captured — [`docs/assets/screenshots/api/`](docs/assets/screenshots/api/) |
+| Reference data | MCC · country · ISO 4217 · BIN/IIN | Python/requests | [`src/ingestion/mcc.py`](src/ingestion/mcc.py), [`country.py`](src/ingestion/country.py), [`iso_currency.py`](src/ingestion/iso_currency.py), [`card_issuer.py`](src/ingestion/card_issuer.py) | API Bronze → API Silver | Implementation present; GUI evidence not captured — [`docs/assets/screenshots/api/`](docs/assets/screenshots/api/) |
+| Incremental ingestion | All 3 live APIs | Python | [`src/ingestion/watermark.py`](src/ingestion/watermark.py) | per-source watermark files | Implementation present; GUI evidence not captured — [`docs/assets/screenshots/api/`](docs/assets/screenshots/api/) |
+| OLTP | Synthetic fintech events | PostgreSQL 16 | [`src/oltp/`](src/oltp/), [`src/synthetic/`](src/synthetic/) | 11-table `finpay` schema | Real screenshots — [`docs/assets/screenshots/postgresql/`](docs/assets/screenshots/postgresql/) |
+| CDC capture | PostgreSQL row changes | Debezium | `docker/docker-compose.yml` (`connect` service) | Kafka topics (one per table) | Real screenshots — [`docs/assets/screenshots/kafka/`](docs/assets/screenshots/kafka/) |
+| CDC transport | Kafka topics | Apache Kafka | `docker/docker-compose.yml` (`kafka` service) | consumed by `src/cdc/consumer.py` | Real screenshots — [`docs/assets/screenshots/kafka/`](docs/assets/screenshots/kafka/) |
+| CDC processing | Kafka change events | Python | [`src/cdc/consumer.py`](src/cdc/consumer.py), [`checkpoint.py`](src/cdc/checkpoint.py), [`silver.py`](src/cdc/silver.py) | CDC Bronze → CDC Silver | CLI evidence — [`docs/assets/screenshots/cdc/`](docs/assets/screenshots/cdc/) |
+| Gold warehouse | API Silver + CDC Silver | Python + DuckDB | [`src/gold/dimensions.py`](src/gold/dimensions.py), [`facts.py`](src/gold/facts.py), [`keys.py`](src/gold/keys.py), [`reconciliation.py`](src/gold/reconciliation.py) | `data/gold/gold.duckdb` — 25 facts/dimensions | CLI evidence — [`docs/assets/screenshots/duckdb/`](docs/assets/screenshots/duckdb/) |
+| Transformation | Gold | dbt-core + dbt-duckdb | [`dbt/models/staging/`](dbt/models/staging/), [`intermediate/`](dbt/models/intermediate/), [`marts/`](dbt/models/marts/) | 6 analytical marts, 73/73 tests | Real screenshots — [`docs/assets/screenshots/dbt/`](docs/assets/screenshots/dbt/) |
+| Orchestration | All 3 operational pipelines | Apache Airflow 3.3.1 | [`dags/merchantmcc_api_pipeline.py`](dags/merchantmcc_api_pipeline.py), [`_cdc_pipeline.py`](dags/merchantmcc_cdc_pipeline.py), [`_client_delivery.py`](dags/merchantmcc_client_delivery.py) | scheduled DAG runs | Real screenshots — [`docs/assets/screenshots/airflow/`](docs/assets/screenshots/airflow/) |
+| Analytics | dbt marts | Power BI (PBIP/TMDL/PBIR) | [`reports/MerchantMCC_S15C_Executive_Overview.pbip`](reports/MerchantMCC_S15C_Executive_Overview.pbip) | semantic model + 4-page report | Illustrative mockups only — Desktop rendering not verified — [`docs/assets/screenshots/powerbi/`](docs/assets/screenshots/powerbi/) |
+| Client delivery | dbt marts | Python | [`src/delivery/pipeline.py`](src/delivery/pipeline.py), [`config.py`](src/delivery/config.py) | `outbox/<client_id>/<dataset>/<run_id>/` | CLI evidence — [`docs/assets/screenshots/client-delivery/`](docs/assets/screenshots/client-delivery/) |
+| Spark track (independent) | Synthetic Bronze | PySpark 4.2 | [`src/spark/bronze_to_silver.py`](src/spark/bronze_to_silver.py), [`silver_to_gold.py`](src/spark/silver_to_gold.py), [`gold_to_consumption.py`](src/spark/gold_to_consumption.py) | Spark Gold + 7 consumption marts | CLI evidence — [`docs/assets/screenshots/spark/`](docs/assets/screenshots/spark/) |
+
+"Implementation present; GUI evidence not captured" means exactly that — the code runs
+and is tested, but no GUI screenshot exists for that specific row. It is never used as a
+substitute for "implemented."
+
 ## 5. Data Engineering Pipeline
 
 End to end: `Source → ingestion → Bronze → validation → Silver → transformation → Gold →
@@ -509,23 +536,40 @@ current architecture (see [`docs/29-databricks-integration-plan.md`](docs/29-dat
 for the honest record of what was and wasn't done). None of these are required to
 demonstrate the engineering already present in this repository.
 
-## Repository Structure
+## Repository Guide
 
-```
+Where each part of the engineering story actually lives:
+
+```text
 MerchantMCC-DE/
-├── src/            # ingestion, silver, gold, cdc, oltp, synthetic, spark, delivery
-├── tests/          # mirrors src/ by layer — 760 tests
-├── dbt/            # staging → intermediate → marts, tests, DuckDB profile
-├── dags/           # the 3 Airflow DAGs
-├── docker/         # docker-compose.yml, Airflow image build
-├── configs/        # source config, delivery dataset registry, client entitlements
-├── data/           # generated Bronze/Silver/Gold/CDC/Spark data (gitignored contents)
-├── outbox/         # Client Data Delivery output (gitignored contents)
-├── reports/        # the Power BI PBIP project
-├── docs/           # numbered design docs, EVIDENCE.md, assets/screenshots/
-├── architecture/   # 18 Mermaid diagrams + 5 use-case diagrams
-└── scripts/        # manual CLI entry points (ingestion, delivery)
+│
+├── src/
+│   ├── ingestion/   API ingestion — OSM, Frankfurter, GLEIF, reference data, watermarks
+│   ├── silver/      API Silver — validation, conformance, quarantine
+│   ├── oltp/        PostgreSQL OLTP schema, loader, synthetic-data config
+│   ├── synthetic/   Synthetic fintech event generation (never real customer data)
+│   ├── cdc/         CDC Bronze/Silver — consumer, checkpoint, envelope, silver upsert
+│   ├── gold/        Gold layer — dimensions, facts, surrogate keys, reconciliation
+│   ├── delivery/    Governed Client Data Delivery — entitlements, validation, manifest
+│   └── spark/       Independent PySpark track — Bronze → Silver → Gold → Consumption
+│
+├── dags/            3 Airflow DAGs (API, CDC, Client Delivery)
+├── dbt/             dbt project — models/staging, intermediate, marts; tests
+├── configs/         source config, delivery dataset registry, client entitlements
+├── tests/           50 test files mirroring src/ by layer — 760 tests total
+├── scripts/         manual CLI entry points (run_ingestion.py, run_delivery.py)
+├── docker/          docker-compose.yml, Airflow image build
+├── reports/         the Power BI PBIP project (TMDL semantic model + PBIR report)
+├── architecture/    18 Mermaid diagrams + 5 use-case diagrams
+├── docs/            29 numbered design docs, EVIDENCE.md, assets/screenshots/
+├── data/            generated Bronze/Silver/Gold/CDC/Spark data (gitignored contents)
+└── outbox/          Client Data Delivery output (gitignored contents)
 ```
+
+Full capability → code → test → evidence mapping (all 15 capabilities, one row each):
+[`docs/EVIDENCE.md`](docs/EVIDENCE.md). Architecture diagram index:
+[`architecture/README.md`](architecture/README.md). Evidence gallery index:
+[`docs/assets/screenshots/README.md`](docs/assets/screenshots/README.md).
 
 ## Running the Project
 
