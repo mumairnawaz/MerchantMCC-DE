@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MerchantMCC-DE — Illustrative Power BI Mockup</title>
+<style>
+  :root { color-scheme: light; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f3f2f1; margin: 0; padding: 24px; color: #201f1e; }
+  .banner { background: #fff4ce; border: 2px solid #d29200; color: #6b4b00; padding: 12px 18px; border-radius: 4px; font-weight: 600; margin-bottom: 20px; text-align: center; }
+  .canvas { background: #ffffff; border: 1px solid #e1dfdd; border-radius: 6px; padding: 20px; max-width: 1280px; margin: 0 auto; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .page-title { font-size: 20px; font-weight: 600; margin: 0 0 4px; color: #201f1e; }
+  .page-sub { color: #605e5c; font-size: 12px; margin-bottom: 16px; }
+  .cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px; }
+  .card { background: #faf9f8; border: 1px solid #e1dfdd; border-radius: 4px; padding: 12px; text-align: center; }
+  .card .label { font-size: 10px; color: #605e5c; text-transform: uppercase; letter-spacing: 0.03em; }
+  .card .value { font-size: 20px; font-weight: 700; color: #201f1e; margin-top: 4px; }
+  .card.control .value { color: #107c10; }
+  .row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .viz { background: #faf9f8; border: 1px solid #e1dfdd; border-radius: 4px; padding: 12px; }
+  .viz h3 { font-size: 12px; margin: 0 0 10px; color: #323130; }
+  .bars { display: flex; align-items: flex-end; gap: 6px; height: 110px; }
+  .bar { flex: 1; background: linear-gradient(180deg,#2f6fdb,#1a4fa0); border-radius: 2px 2px 0 0; }
+  .donut { width: 110px; height: 110px; border-radius: 50%; background: conic-gradient(#2f6fdb 0 87.9%, #d13438 87.9% 100%); margin: 0 auto; }
+  .legend { font-size: 11px; margin-top: 8px; text-align: center; color: #605e5c; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; background: #f3f2f1; padding: 6px 8px; color: #323130; }
+  td { padding: 6px 8px; border-top: 1px solid #edebe9; }
+  .identity { background: #dff6dd; border: 1px solid #107c10; border-radius: 4px; padding: 10px 14px; font-size: 12px; color: #0b6a0b; margin-bottom: 16px; text-align: center; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="banner">⚠ ILLUSTRATIVE MOCKUP — based on MerchantMCC-DE Gold/dbt data — ACTUAL POWER BI DESKTOP RENDERING NOT YET VERIFIED</div>
+  <div class="canvas">
+    <div class="page-title">Executive Overview</div>
+    <div class="page-sub">MerchantMCC-DE · Source: transaction_mart, settlement_mart, reconciliation_mart (real dbt marts)</div>
+
+    <div class="cards">
+      <div class="card"><div class="label">Total Transactions</div><div class="value">4,000</div></div>
+      <div class="card"><div class="label">Total Amount</div><div class="value">£501,672.07</div></div>
+      <div class="card control"><div class="label">Approved Amount</div><div class="value">£435,106.16</div></div>
+      <div class="card"><div class="label">Declined Transactions</div><div class="value">536</div></div>
+      <div class="card control"><div class="label">Settlement Amount</div><div class="value">£435,106.16</div></div>
+      <div class="card control"><div class="label">Reconciliation Expected</div><div class="value">£435,106.16</div></div>
+    </div>
+
+    <div class="identity">Approved Amount = Settlement Amount = Reconciliation Expected = £435,106.16 ✓</div>
+
+    <div class="row">
+      <div class="viz">
+        <h3>TRANSACTION AMOUNT TREND (illustrative shape only)</h3>
+        <div class="bars">
+          <div class="bar" style="height:40%"></div><div class="bar" style="height:55%"></div>
+          <div class="bar" style="height:48%"></div><div class="bar" style="height:70%"></div>
+          <div class="bar" style="height:60%"></div><div class="bar" style="height:85%"></div>
+          <div class="bar" style="height:65%"></div><div class="bar" style="height:90%"></div>
+          <div class="bar" style="height:75%"></div><div class="bar" style="height:95%"></div>
+        </div>
+        <div class="legend">full_date (transaction_mart) — illustrative distribution, not real daily values</div>
+      </div>
+      <div class="viz">
+        <h3>STATUS BREAKDOWN</h3>
+        <div class="donut"></div>
+        <div class="legend">■ Approved 87.9%&nbsp;&nbsp;■ Declined 13.4%</div>
+      </div>
+    </div>
+
+    <div class="viz">
+      <h3>TOP MERCHANTS (merchant_mart — real columns, illustrative rows)</h3>
+      <table>
+        <tr><th>merchant_name</th><th>mcc_description</th><th>approved_amount_total</th></tr>
+        <tr><td>(real merchant, OSM-sourced)</td><td>(real MCC classification)</td><td>£&hellip;</td></tr>
+        <tr><td>(real merchant, OSM-sourced)</td><td>(real MCC classification)</td><td>£&hellip;</td></tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

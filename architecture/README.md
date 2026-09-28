@@ -9,23 +9,49 @@ implementation evolves.
 
 ```mermaid
 flowchart TB
-    subgraph API_PATH["EXTERNAL API PATH"]
-        EXT["External APIs<br/>OSM · Frankfurter · GLEIF · reference"] --> ABronze[("API Bronze")] --> ASilver[("API Silver")]
+    subgraph SOURCES["SOURCE SYSTEMS"]
+        OSM["OpenStreetMap<br/>Overpass"]
+        FX["Frankfurter<br/>FX rates"]
+        GLEIF["GLEIF<br/>Legal Entities"]
+        REF["Reference data<br/>MCC · country · ISO 4217 · BIN/IIN"]
+        PG[("PostgreSQL OLTP<br/>11-table synthetic fintech schema")]
     end
-    subgraph CDC_PATH["CDC PATH"]
-        PG[("PostgreSQL / OLTP")] --> DBZ["Debezium"] --> KAFKA["Kafka"] --> CBronze[("CDC Bronze")] --> CSilver[("CDC Silver")]
+    subgraph APIPATH["API INGESTION"]
+        ABronze[("API Bronze")] --> ASilver[("API Silver")]
     end
-    ASilver --> GOLD[("Gold — DuckDB<br/>facts + dimensions")]
+    subgraph CDCPATH["CDC STREAMING"]
+        DBZ["Debezium"] --> KAFKA["Kafka"] --> CBronze[("CDC Bronze")] --> CSilver[("CDC Silver")]
+    end
+    OSM --> ABronze
+    FX --> ABronze
+    GLEIF --> ABronze
+    REF --> ABronze
+    PG --> DBZ
+    ASilver --> GOLD[("GOLD<br/>facts + dimensions — DuckDB")]
     CSilver --> GOLD
     GOLD --> DBT["dbt<br/>staging → intermediate → marts"]
-    DBT --> BI["Power BI<br/>internal analytics"]
-    DBT --> DELIVERY["Client Delivery<br/>entitlement → validation → manifest → CSV/Parquet → outbox/"]
+    subgraph CONSUMPTION["CONSUMPTION"]
+        BI["Power BI<br/>internal analytics"]
+        DELIVERY["Client Data Delivery<br/>entitlement filter → validation → manifest"]
+    end
+    DBT --> BI
+    DBT --> DELIVERY
+    DELIVERY --> FILES[("CSV / Parquet<br/>outbox/")]
+    ORCH{{"Airflow — orchestration<br/>3 independent DAGs"}}
+    ORCH -.-> APIPATH
+    ORCH -.-> CDCPATH
+    ORCH -.-> DELIVERY
+    QUALITY{{"Data Quality & Reconciliation<br/>validation · control totals · idempotency · checkpoints"}}
+    QUALITY -.-> APIPATH
+    QUALITY -.-> CDCPATH
+    QUALITY -.-> GOLD
+    QUALITY -.-> DELIVERY
 ```
 
-A separate, independent PySpark track (Bronze → Silver → Gold → Consumption) and Apache
-Airflow orchestration (3 DAGs, one per operational pipeline) sit alongside this — see
+A separate, independent PySpark track (Bronze → Silver → Gold → Consumption) sits
+alongside this — see
 [`diagrams/01-overall-architecture.md`](diagrams/01-overall-architecture.md) for the
-complete picture including both.
+complete picture including it.
 
 ## All diagrams
 
@@ -53,3 +79,17 @@ duplicating them:
 | 12 | Incremental (watermark) ingestion sequence | [`diagrams/12-incremental-ingestion.md`](diagrams/12-incremental-ingestion.md) |
 | 13 | Fintech transaction lifecycle (synthetic) | [`diagrams/13-transaction-lifecycle.md`](diagrams/13-transaction-lifecycle.md) |
 | 14 | Data lineage (metadata foundation; full lineage tooling remains a documented future extension) | [`diagrams/14-data-lineage.md`](diagrams/14-data-lineage.md) |
+| 15 | CDC event lifecycle (INSERT/UPDATE/DELETE, LSN, checkpoint, idempotency) | [`diagrams/15-cdc-event-lifecycle.md`](diagrams/15-cdc-event-lifecycle.md) |
+| 16 | Deployment / local infrastructure (real containers, network, mounts) | [`diagrams/16-deployment-infrastructure.md`](diagrams/16-deployment-infrastructure.md) |
+| 17 | Security boundary (what's a secret, where it's enforced) | [`diagrams/17-security-boundary.md`](diagrams/17-security-boundary.md) |
+| 18 | Data quality flow, consolidated across all 4 pipelines with real numbers | [`diagrams/18-data-quality-flow.md`](diagrams/18-data-quality-flow.md) |
+
+## Use-case diagrams
+
+Who uses this platform and how — see [`use-cases/`](use-cases/).
+
+## Evidence
+
+Real, verified engineering evidence (CLI output, real run results, and an honestly-labeled
+Power BI mockup) — see [`docs/assets/screenshots/`](../docs/assets/screenshots/) and
+[`docs/EVIDENCE.md`](../docs/EVIDENCE.md).

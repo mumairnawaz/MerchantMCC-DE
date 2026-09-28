@@ -1,25 +1,27 @@
 # Kafka / Debezium Evidence
 
-No GUI tool (e.g. a Kafka UI) is running in this environment, so the evidence below is
-real CLI output captured directly against the live broker and connector — proving the
-same facts a UI screenshot would, without needing one.
+Real screenshots from a local Kafka GUI client connected to the `MerchantMCC Kafka`
+cluster (`localhost:29092`), captured 2026-09-28.
+
+### Topic browser
+
+![Kafka topic browser](01-kafka-topics.png)
+
+Every `finpay.finpay.*` topic is a real table Debezium is streaming — `campaigns`,
+`cardholders`, `card_tokens`, `clients`, `offers`, `programs`, `reconciliation`,
+`reward_events`, `settlements`, `transaction_events`, `transactions` — plus Kafka
+Connect's own internal `finpay_connect_configs/offsets/statuses` topics and the two live
+`finpay-cdc-bronze-consumer` consumer instances shown under **Consumers**.
+
+### Transactions topic — real CDC messages
+
+![finpay.finpay.transactions messages](finpay.finpay.transactions.png)
+
+50 real Debezium change-event messages on partition 0 of `finpay.finpay.transactions`,
+with real offsets and timestamps — proof that row-level changes in PostgreSQL are
+actually reaching Kafka, not just that the topic exists.
 
 ## CLI evidence (real, captured 2026-09-28)
-
-**Real Kafka topics — one per source table, created by Debezium:**
-```
-finpay.finpay.campaigns
-finpay.finpay.card_tokens
-finpay.finpay.cardholders
-finpay.finpay.clients
-finpay.finpay.offers
-finpay.finpay.programs
-finpay.finpay.reconciliation
-finpay.finpay.reward_events
-finpay.finpay.settlements
-finpay.finpay.transaction_events
-finpay.finpay.transactions
-```
 
 **Debezium connector status — RUNNING:**
 ```json
@@ -37,11 +39,6 @@ finpay-cdc-bronze-consumer finpay.finpay.reward_events        0
 finpay-cdc-bronze-consumer finpay.finpay.card_tokens          0
 finpay-cdc-bronze-consumer finpay.finpay.cardholders          0
 ```
-(offsets omitted here for brevity — full output available by re-running the commands
-below; no credentials are involved in any of this output)
-
-**Caption**: *"Kafka — Debezium-generated fintech CDC topics, connector RUNNING, zero
-consumer lag."*
 
 ## Reproducing this evidence
 
@@ -51,12 +48,6 @@ curl -s http://localhost:8083/connectors/finpay-postgres-cdc-connector/status
 docker exec merchantmcc_kafka /kafka/bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group finpay-cdc-bronze-consumer
 ```
 
-## Manual screenshot checklist (optional, if a Kafka UI is added later)
-
-- [ ] Topic list (equivalent to the CLI output above)
-- [ ] Debezium connector status page
-- [ ] A sample CDC message payload (redact nothing — these are synthetic fintech events,
-      not real financial data)
-
-No credentials or tokens appear in any of the commands above — none of the three brokers
-used here require authentication in this local setup.
+No credentials or tokens appear in either screenshot or the commands above — none of the
+brokers used here require authentication in this local setup, and the message payloads
+shown are synthetic fintech events, not real financial data.
