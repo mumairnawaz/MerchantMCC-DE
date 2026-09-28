@@ -1,0 +1,72 @@
+table client_program_mart
+
+	measure 'Client Transaction Count' = SUM(client_program_mart[transaction_count])
+		formatString: #,##0
+
+	measure 'Client Approved Amount' = SUM(client_program_mart[approved_amount_total])
+		formatString: £#,##0.00
+
+	measure 'Client Declined Count' = SUM(client_program_mart[declined_count])
+		formatString: #,##0
+
+	column client_key
+		dataType: int64
+		isHidden
+		sourceColumn: client_key
+		summarizeBy: none
+
+	column client_id
+		dataType: string
+		sourceColumn: client_id
+		summarizeBy: none
+
+	column client_legal_name
+		dataType: string
+		sourceColumn: client_legal_name
+		summarizeBy: none
+
+	column program_key
+		dataType: int64
+		isHidden
+		sourceColumn: program_key
+		summarizeBy: none
+
+	column program_id
+		dataType: string
+		sourceColumn: program_id
+		summarizeBy: none
+
+	column program_name
+		dataType: string
+		sourceColumn: program_name
+		summarizeBy: none
+
+	column program_type
+		dataType: string
+		sourceColumn: program_type
+		summarizeBy: none
+
+	column transaction_count
+		dataType: int64
+		sourceColumn: transaction_count
+		summarizeBy: sum
+
+	column approved_amount_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: approved_amount_total
+		summarizeBy: sum
+
+	column declined_count
+		dataType: int64
+		sourceColumn: declined_count
+		summarizeBy: sum
+
+	partition client_program_mart = m
+		mode: import
+		source =
+			let
+				Source = Odbc.Query("dsn=MerchantMCC_Gold", "SELECT client_key, client_id, client_legal_name, program_key, program_id, program_name, program_type, transaction_count, approved_amount_total, declined_count FROM marts.client_program_mart")
+			in
+				Source
+

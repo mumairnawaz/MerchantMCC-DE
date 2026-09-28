@@ -1,0 +1,68 @@
+table reconciliation_mart
+
+	measure 'Reconciliation Expected Total' = SUM(reconciliation_mart[expected_amount_total])
+		formatString: £#,##0.00
+
+	measure 'Reconciliation Actual Total' = SUM(reconciliation_mart[actual_amount_total])
+		formatString: £#,##0.00
+
+	measure 'Reconciliation Difference' = SUM(reconciliation_mart[variance_total])
+		formatString: £#,##0.00
+
+	column reconciled_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceColumn: reconciled_date
+		summarizeBy: none
+
+	column year
+		dataType: int64
+		sourceColumn: year
+		summarizeBy: none
+
+	column month
+		dataType: int64
+		sourceColumn: month
+		summarizeBy: none
+
+	column month_name
+		dataType: string
+		sourceColumn: month_name
+		summarizeBy: none
+
+	column match_status
+		dataType: string
+		sourceColumn: match_status
+		summarizeBy: none
+
+	column reconciliation_count
+		dataType: int64
+		sourceColumn: reconciliation_count
+		summarizeBy: sum
+
+	column expected_amount_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: expected_amount_total
+		summarizeBy: sum
+
+	column actual_amount_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: actual_amount_total
+		summarizeBy: sum
+
+	column variance_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: variance_total
+		summarizeBy: sum
+
+	partition reconciliation_mart = m
+		mode: import
+		source =
+			let
+				Source = Odbc.Query("dsn=MerchantMCC_Gold", "SELECT reconciled_date, year, month, month_name, match_status, reconciliation_count, expected_amount_total, actual_amount_total, variance_total FROM marts.reconciliation_mart")
+			in
+				Source
+

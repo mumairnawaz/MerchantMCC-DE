@@ -1,0 +1,107 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "table_client_program_summary",
+  "position": {
+    "x": 20,
+    "y": 20,
+    "width": 700,
+    "height": 500,
+    "z": 0,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "client_program_mart"
+                    }
+                  },
+                  "Property": "client_legal_name"
+                }
+              },
+              "queryRef": "client_program_mart.client_legal_name",
+              "nativeQueryRef": "client_legal_name"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "client_program_mart"
+                    }
+                  },
+                  "Property": "program_name"
+                }
+              },
+              "queryRef": "client_program_mart.program_name",
+              "nativeQueryRef": "program_name"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "client_program_mart"
+                    }
+                  },
+                  "Property": "program_type"
+                }
+              },
+              "queryRef": "client_program_mart.program_type",
+              "nativeQueryRef": "program_type"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "client_program_mart"
+                    }
+                  },
+                  "Property": "Client Transaction Count"
+                }
+              },
+              "queryRef": "client_program_mart.Client Transaction Count",
+              "nativeQueryRef": "Client Transaction Count"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "client_program_mart"
+                    }
+                  },
+                  "Property": "Client Approved Amount"
+                }
+              },
+              "queryRef": "client_program_mart.Client Approved Amount",
+              "nativeQueryRef": "Client Approved Amount"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "client_program_mart"
+                    }
+                  },
+                  "Property": "Client Declined Count"
+                }
+              },
+              "queryRef": "client_program_mart.Client Declined Count",
+              "nativeQueryRef": "Client Declined Count"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

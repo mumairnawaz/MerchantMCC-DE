@@ -1,0 +1,64 @@
+table settlement_mart
+
+	measure 'Settlement Amount Total' = SUM(settlement_mart[settlement_amount_total])
+		formatString: £#,##0.00
+
+	measure 'Settlement Fee Total' = SUM(settlement_mart[fee_amount_total])
+		formatString: £#,##0.00
+
+	measure 'Settlement Net Total' = SUM(settlement_mart[net_amount_total])
+		formatString: £#,##0.00
+
+	column settlement_batch_id
+		dataType: string
+		sourceColumn: settlement_batch_id
+		summarizeBy: none
+
+	column currency_code
+		dataType: string
+		sourceColumn: currency_code
+		summarizeBy: none
+
+	column batch_start_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceColumn: batch_start_date
+		summarizeBy: none
+
+	column batch_end_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceColumn: batch_end_date
+		summarizeBy: none
+
+	column settlement_count
+		dataType: int64
+		sourceColumn: settlement_count
+		summarizeBy: sum
+
+	column settlement_amount_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: settlement_amount_total
+		summarizeBy: sum
+
+	column fee_amount_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: fee_amount_total
+		summarizeBy: sum
+
+	column net_amount_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: net_amount_total
+		summarizeBy: sum
+
+	partition settlement_mart = m
+		mode: import
+		source =
+			let
+				Source = Odbc.Query("dsn=MerchantMCC_Gold", "SELECT settlement_batch_id, currency_code, batch_start_date, batch_end_date, settlement_count, settlement_amount_total, fee_amount_total, net_amount_total FROM marts.settlement_mart")
+			in
+				Source
+

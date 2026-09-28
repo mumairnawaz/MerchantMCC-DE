@@ -1,0 +1,106 @@
+version: 2
+
+# unique/not_null on every dimension's surrogate key, plus not_null on
+# every fact's grain-defining column(s) — a dbt-native re-statement of the
+# guarantees src/gold/validation.py already enforces in Python (S14). Having
+# both is deliberate: Python enforces it at build time (hard-fail before
+# any Parquet is written); dbt tests re-verify it at the dbt-model boundary,
+# which is what a downstream dbt/BI consumer actually depends on. Not
+# duplicated effort — different consumer, different point of failure.
+models:
+  - name: stg_dim_date
+    columns:
+      - name: date_key
+        tests: [unique, not_null]
+  - name: stg_dim_merchant
+    columns:
+      - name: merchant_key
+        tests: [unique, not_null]
+  - name: stg_dim_mcc
+    columns:
+      - name: mcc_key
+        tests: [unique, not_null]
+  - name: stg_dim_country
+    columns:
+      - name: country_key
+        tests: [unique, not_null]
+  - name: stg_dim_currency
+    columns:
+      - name: currency_key
+        tests: [unique, not_null]
+  - name: stg_dim_card_issuer
+    columns:
+      - name: card_issuer_key
+        tests: [unique, not_null]
+  - name: stg_dim_legal_entity
+    columns:
+      - name: legal_entity_key
+        tests: [unique, not_null]
+  - name: stg_dim_client
+    columns:
+      - name: client_key
+        tests: [unique, not_null]
+  - name: stg_dim_program
+    columns:
+      - name: program_key
+        tests: [unique, not_null]
+  - name: stg_dim_campaign
+    columns:
+      - name: campaign_key
+        tests: [unique, not_null]
+  - name: stg_dim_offer
+    columns:
+      - name: offer_key
+        tests: [unique, not_null]
+  - name: stg_dim_cardholder
+    columns:
+      - name: cardholder_key
+        tests: [unique, not_null]
+  - name: stg_dim_card_token
+    columns:
+      - name: card_token_key
+        tests: [unique, not_null]
+  - name: stg_fact_transactions
+    columns:
+      - name: transaction_id
+        tests: [unique, not_null]
+      - name: merchant_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('stg_dim_merchant')
+                field: merchant_key
+      - name: mcc_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('stg_dim_mcc')
+                field: mcc_key
+      - name: currency_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('stg_dim_currency')
+                field: currency_key
+  - name: stg_fact_settlements
+    columns:
+      - name: settlement_id
+        tests: [unique, not_null]
+  - name: stg_fact_reconciliation
+    columns:
+      - name: reconciliation_id
+        tests: [unique, not_null]
+  - name: stg_fact_transaction_events
+    columns:
+      - name: event_id
+        tests: [not_null]
+  - name: stg_fact_rewards
+    columns:
+      - name: reward_id
+        tests: [not_null]
+      - name: offer_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('stg_dim_offer')
+                field: offer_key

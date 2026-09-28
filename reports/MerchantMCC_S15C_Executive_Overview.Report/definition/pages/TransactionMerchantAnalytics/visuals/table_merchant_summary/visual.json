@@ -1,0 +1,93 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "table_merchant_summary",
+  "position": {
+    "x": 960,
+    "y": 20,
+    "width": 300,
+    "height": 560,
+    "z": 0,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "merchant_mart"
+                    }
+                  },
+                  "Property": "merchant_name"
+                }
+              },
+              "queryRef": "merchant_mart.merchant_name",
+              "nativeQueryRef": "merchant_name"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "merchant_mart"
+                    }
+                  },
+                  "Property": "mcc_description"
+                }
+              },
+              "queryRef": "merchant_mart.mcc_description",
+              "nativeQueryRef": "mcc_description"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "merchant_mart"
+                    }
+                  },
+                  "Property": "Merchant Transaction Count"
+                }
+              },
+              "queryRef": "merchant_mart.Merchant Transaction Count",
+              "nativeQueryRef": "Merchant Transaction Count"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "merchant_mart"
+                    }
+                  },
+                  "Property": "Merchant Approved Amount"
+                }
+              },
+              "queryRef": "merchant_mart.Merchant Approved Amount",
+              "nativeQueryRef": "Merchant Approved Amount"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "merchant_mart"
+                    }
+                  },
+                  "Property": "Merchant Declined Count"
+                }
+              },
+              "queryRef": "merchant_mart.Merchant Declined Count",
+              "nativeQueryRef": "Merchant Declined Count"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

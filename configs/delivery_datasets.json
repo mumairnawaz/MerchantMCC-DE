@@ -1,0 +1,62 @@
+{
+  "transaction_mart": {
+    "schema_version": "1.0.0",
+    "output_formats": ["csv", "parquet"],
+    "expected_columns": ["full_date", "year", "month", "month_name", "currency_code", "transaction_status", "transaction_count", "amount_total"],
+    "business_grain": ["full_date", "currency_code", "transaction_status"],
+    "requires_client_filter": false,
+    "date_column": "full_date",
+    "period_start_column": null,
+    "period_end_column": null,
+    "control_total_column": "amount_total",
+    "control_total_filter": "transaction_status = 'APPROVED'"
+  },
+  "settlement_mart": {
+    "schema_version": "1.0.0",
+    "output_formats": ["csv"],
+    "expected_columns": ["settlement_batch_id", "currency_code", "batch_start_date", "batch_end_date", "settlement_count", "settlement_amount_total", "fee_amount_total", "net_amount_total"],
+    "business_grain": ["settlement_batch_id", "currency_code"],
+    "requires_client_filter": false,
+    "date_column": null,
+    "period_start_column": "batch_start_date",
+    "period_end_column": "batch_end_date",
+    "control_total_column": "settlement_amount_total",
+    "control_total_filter": null
+  },
+  "reconciliation_mart": {
+    "schema_version": "1.0.0",
+    "output_formats": ["csv"],
+    "expected_columns": ["reconciled_date", "year", "month", "month_name", "match_status", "reconciliation_count", "expected_amount_total", "actual_amount_total", "variance_total"],
+    "business_grain": ["reconciled_date", "match_status"],
+    "requires_client_filter": false,
+    "date_column": "reconciled_date",
+    "period_start_column": null,
+    "period_end_column": null,
+    "control_total_column": "expected_amount_total",
+    "control_total_filter": null
+  },
+  "merchant_mart": {
+    "schema_version": "1.0.0",
+    "output_formats": ["parquet"],
+    "expected_columns": ["merchant_key", "merchant_id", "merchant_name", "mcc_code", "mcc_description", "transaction_count", "approved_amount_total", "declined_count"],
+    "business_grain": ["merchant_key"],
+    "requires_client_filter": false,
+    "date_column": null,
+    "period_start_column": null,
+    "period_end_column": null,
+    "control_total_column": "approved_amount_total",
+    "control_total_filter": null
+  },
+  "client_program_mart": {
+    "schema_version": "1.0.0",
+    "output_formats": ["parquet"],
+    "expected_columns": ["client_key", "client_id", "client_legal_name", "program_key", "program_id", "program_name", "program_type", "transaction_count", "approved_amount_total", "declined_count"],
+    "business_grain": ["client_key", "program_key"],
+    "requires_client_filter": true,
+    "date_column": null,
+    "period_start_column": null,
+    "period_end_column": null,
+    "control_total_column": "approved_amount_total",
+    "control_total_filter": null
+  }
+}

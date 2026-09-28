@@ -1,0 +1,93 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "table_reconciliation_detail",
+  "position": {
+    "x": 20,
+    "y": 140,
+    "width": 820,
+    "height": 380,
+    "z": 0,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "reconciliation_mart"
+                    }
+                  },
+                  "Property": "reconciled_date"
+                }
+              },
+              "queryRef": "reconciliation_mart.reconciled_date",
+              "nativeQueryRef": "reconciled_date"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "reconciliation_mart"
+                    }
+                  },
+                  "Property": "match_status"
+                }
+              },
+              "queryRef": "reconciliation_mart.match_status",
+              "nativeQueryRef": "match_status"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "reconciliation_mart"
+                    }
+                  },
+                  "Property": "Reconciliation Expected Total"
+                }
+              },
+              "queryRef": "reconciliation_mart.Reconciliation Expected Total",
+              "nativeQueryRef": "Reconciliation Expected Total"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "reconciliation_mart"
+                    }
+                  },
+                  "Property": "Reconciliation Actual Total"
+                }
+              },
+              "queryRef": "reconciliation_mart.Reconciliation Actual Total",
+              "nativeQueryRef": "Reconciliation Actual Total"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "reconciliation_mart"
+                    }
+                  },
+                  "Property": "Reconciliation Difference"
+                }
+              },
+              "queryRef": "reconciliation_mart.Reconciliation Difference",
+              "nativeQueryRef": "Reconciliation Difference"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

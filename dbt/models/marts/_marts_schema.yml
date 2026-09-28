@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: merchant_mart
+    columns:
+      - name: merchant_key
+        tests: [not_null]
+  - name: transaction_mart
+    columns:
+      - name: full_date
+        tests: [not_null]
+  - name: client_program_mart
+    columns:
+      - name: client_key
+        tests: [not_null]
+  - name: settlement_mart
+    columns:
+      - name: settlement_batch_id
+        tests: [not_null]
+  - name: reconciliation_mart
+    columns:
+      - name: reconciled_date
+        tests: [not_null]
+  - name: rewards_mart
+    columns:
+      - name: offer_key
+        tests: [not_null]

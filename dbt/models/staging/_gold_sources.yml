@@ -1,0 +1,37 @@
+version: 2
+
+# These 18 tables are built and owned by src/gold/pipeline.py (S14) — dbt
+# never creates, writes, or drops them. dbt only reads them (schema "main"
+# of the same gold.duckdb file dbt itself writes staging/intermediate/marts
+# into, under separate schemas — see dbt/macros/generate_schema_name.sql).
+# No freshness checks are declared: S14's pipeline is a full-rebuild-per-run
+# batch process with no reliable "loaded_at" column to check against, and
+# inventing one here would be exactly the kind of fabricated signal this
+# project's documentation discipline exists to avoid.
+sources:
+  - name: gold
+    schema: main
+    description: >
+      The S14 Gold dimensional model (13 dimensions + 5 facts), materialized
+      by src/gold/pipeline.py from API Silver + CDC Silver. Frozen surface
+      for this phase — see docs/27-gold-olap-design.md for full grain/key
+      documentation of every table listed here.
+    tables:
+      - name: dim_date
+      - name: dim_merchant
+      - name: dim_mcc
+      - name: dim_country
+      - name: dim_currency
+      - name: dim_card_issuer
+      - name: dim_legal_entity
+      - name: dim_client
+      - name: dim_program
+      - name: dim_campaign
+      - name: dim_offer
+      - name: dim_cardholder
+      - name: dim_card_token
+      - name: fact_transactions
+      - name: fact_transaction_events
+      - name: fact_settlements
+      - name: fact_reconciliation
+      - name: fact_rewards

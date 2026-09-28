@@ -1,0 +1,14 @@
+# Extra packages layered onto the official Apache Airflow image, so
+# PythonOperator tasks can import this project's own pipeline modules.
+# Version constraints copied verbatim from pyproject.toml's core
+# `dependencies` list (not re-invented) — this is the exact package set
+# src/cdc/consumer.py, src/cdc/silver.py, src/gold/pipeline.py, and dbt/
+# actually import, confirmed by grepping their real import statements
+# before writing this file. psycopg is intentionally NOT included here:
+# none of the three target modules import it (src/oltp/ is not part of
+# this infrastructure step's scope).
+pyarrow>=17.0
+confluent-kafka>=2.5
+duckdb>=1.0
+dbt-core>=1.12
+dbt-duckdb>=1.11

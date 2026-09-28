@@ -1,0 +1,61 @@
+table merchant_mart
+
+	measure 'Merchant Transaction Count' = SUM(merchant_mart[transaction_count])
+		formatString: #,##0
+
+	measure 'Merchant Approved Amount' = SUM(merchant_mart[approved_amount_total])
+		formatString: £#,##0.00
+
+	measure 'Merchant Declined Count' = SUM(merchant_mart[declined_count])
+		formatString: #,##0
+
+	column merchant_key
+		dataType: int64
+		isHidden
+		sourceColumn: merchant_key
+		summarizeBy: none
+
+	column merchant_id
+		dataType: string
+		sourceColumn: merchant_id
+		summarizeBy: none
+
+	column merchant_name
+		dataType: string
+		sourceColumn: merchant_name
+		summarizeBy: none
+
+	column mcc_code
+		dataType: string
+		sourceColumn: mcc_code
+		summarizeBy: none
+
+	column mcc_description
+		dataType: string
+		sourceColumn: mcc_description
+		summarizeBy: none
+
+	column transaction_count
+		dataType: int64
+		sourceColumn: transaction_count
+		summarizeBy: sum
+
+	column approved_amount_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: approved_amount_total
+		summarizeBy: sum
+
+	column declined_count
+		dataType: int64
+		sourceColumn: declined_count
+		summarizeBy: sum
+
+	partition merchant_mart = m
+		mode: import
+		source =
+			let
+				Source = Odbc.Query("dsn=MerchantMCC_Gold", "SELECT merchant_key, merchant_id, merchant_name, mcc_code, mcc_description, transaction_count, approved_amount_total, declined_count FROM marts.merchant_mart")
+			in
+				Source
+

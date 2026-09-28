@@ -1,0 +1,67 @@
+table transaction_mart
+
+	measure 'Total Transactions' = SUM(transaction_mart[transaction_count])
+		formatString: #,##0
+
+	measure 'Total Transaction Amount' = SUM(transaction_mart[amount_total])
+		formatString: £#,##0.00
+
+	measure 'Approved Amount' = CALCULATE(SUM(transaction_mart[amount_total]), transaction_mart[transaction_status] = "APPROVED")
+		formatString: £#,##0.00
+
+	measure 'Declined Transactions' = CALCULATE(SUM(transaction_mart[transaction_count]), transaction_mart[transaction_status] = "DECLINED")
+		formatString: #,##0
+
+	measure 'Declined Amount' = CALCULATE(SUM(transaction_mart[amount_total]), transaction_mart[transaction_status] = "DECLINED")
+		formatString: £#,##0.00
+
+	column full_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceColumn: full_date
+		summarizeBy: none
+
+	column year
+		dataType: int64
+		sourceColumn: year
+		summarizeBy: none
+
+	column month
+		dataType: int64
+		sourceColumn: month
+		summarizeBy: none
+
+	column month_name
+		dataType: string
+		sourceColumn: month_name
+		summarizeBy: none
+
+	column currency_code
+		dataType: string
+		sourceColumn: currency_code
+		summarizeBy: none
+
+	column transaction_status
+		dataType: string
+		sourceColumn: transaction_status
+		summarizeBy: none
+
+	column transaction_count
+		dataType: int64
+		sourceColumn: transaction_count
+		summarizeBy: sum
+
+	column amount_total
+		dataType: decimal
+		formatString: £#,##0.00
+		sourceColumn: amount_total
+		summarizeBy: sum
+
+	partition transaction_mart = m
+		mode: import
+		source =
+			let
+				Source = Odbc.Query("dsn=MerchantMCC_Gold", "SELECT full_date, year, month, month_name, currency_code, transaction_status, transaction_count, amount_total FROM marts.transaction_mart")
+			in
+				Source
+

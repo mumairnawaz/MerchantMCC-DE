@@ -3,6 +3,8 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.venv-spark/
+.venv-dbt/
 *.egg-info/
 .pytest_cache/
 
@@ -14,27 +16,65 @@ venv/
 *secret*
 local_settings.py
 
+# S15 Airflow SimpleAuthManager — real plaintext admin password, never committed
+docker/airflow/simple_auth_manager_passwords.json
+
 # Generated data (not source-controlled)
 data/bronze/*
 data/silver/*
 data/gold/*
 data/watermarks/*
+data/quarantine/*
+data/synthetic_oltp/*
+data/bronze_cdc/*
+data/quarantine_cdc/*
+data/silver_cdc/*
+data/quarantine_cdc_silver/*
+data/bronze_spark/*
+data/silver_spark/*
+data/rejected_spark/*
+data/gold_spark/*
+data/consumption_spark/*
 !data/bronze/.gitkeep
 !data/silver/.gitkeep
 !data/gold/.gitkeep
 !data/watermarks/.gitkeep
+!data/synthetic_oltp/.gitkeep
+!data/bronze_cdc/.gitkeep
+!data/silver_cdc/.gitkeep
+!data/bronze_spark/.gitkeep
+!data/silver_spark/.gitkeep
+!data/rejected_spark/.gitkeep
+!data/gold_spark/.gitkeep
+!data/consumption_spark/.gitkeep
 outbox/*
 !outbox/.gitkeep
-reports/*
-!reports/.gitkeep
+
+# reports/ — Power BI Desktop project (PBIP) artifacts are source-controlled
+# text/JSON/TMDL files; only Power BI Desktop's own per-user local caches are
+# excluded (Microsoft's documented default .gitignore for PBIP projects)
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+# diagnostic backup copies made before a PBIR fix — never a deliverable, kept
+# locally only until Desktop rendering is manually reconfirmed
+reports/*.BACKUP/
+reports/*.pbip.BACKUP
 
 # Logs
 logs/
 *.log
 
+# dbt (S15) — generated artifacts, never source-controlled; dbt/models,
+# dbt/macros, dbt/tests, dbt_project.yml, profiles.yml remain tracked
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+
 # IDE
 .vscode/
 .idea/
+.claude/
 
 # OS
 .DS_Store

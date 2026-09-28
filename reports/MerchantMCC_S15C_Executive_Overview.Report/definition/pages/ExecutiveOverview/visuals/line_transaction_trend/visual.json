@@ -1,0 +1,55 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "line_transaction_trend",
+  "position": {
+    "x": 20,
+    "y": 140,
+    "width": 620,
+    "height": 280,
+    "z": 0,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "lineChart",
+    "query": {
+      "queryState": {
+        "Category": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "transaction_mart"
+                    }
+                  },
+                  "Property": "full_date"
+                }
+              },
+              "queryRef": "transaction_mart.full_date",
+              "nativeQueryRef": "full_date"
+            }
+          ]
+        },
+        "Y": {
+          "projections": [
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "transaction_mart"
+                    }
+                  },
+                  "Property": "Total Transaction Amount"
+                }
+              },
+              "queryRef": "transaction_mart.Total Transaction Amount",
+              "nativeQueryRef": "Total Transaction Amount"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

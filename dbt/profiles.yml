@@ -1,0 +1,14 @@
+# Local, file-based profile — no credentials, no secrets (consistent with
+# this project's "free/local/portfolio" tooling philosophy, docs/27 §2).
+# Kept inside the project directory (not ~/.dbt/profiles.yml) so the whole
+# transformation layer is self-contained and portable — invoke dbt from
+# this directory, or pass --profiles-dir dbt --project-dir dbt from the
+# repo root.
+finpay_gold:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "../data/gold/gold.duckdb"
+      schema: main
+      threads: 4

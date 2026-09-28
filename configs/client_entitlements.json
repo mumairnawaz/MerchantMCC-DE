@@ -1,0 +1,22 @@
+{
+  "CLI-0001": {
+    "legal_name": "APS ISSUE DISCRETIONARY TRUST",
+    "client_type": "ISSUER",
+    "allowed_datasets": ["transaction_mart", "settlement_mart", "reconciliation_mart"]
+  },
+  "CLI-0004": {
+    "legal_name": "THE SIR TOM COWIE CHARITABLE TRUST",
+    "client_type": "NETWORK",
+    "allowed_datasets": ["transaction_mart", "reconciliation_mart"]
+  },
+  "CLI-0007": {
+    "legal_name": "VIRGIN HOLIDAYS LIMITED",
+    "client_type": "PROGRAM_OWNER",
+    "allowed_datasets": ["client_program_mart", "merchant_mart"]
+  },
+  "CLI-0008": {
+    "legal_name": "THE JONATHAN PHILIP SWEET PERSONAL INJURY SETTLEMENT",
+    "client_type": "PROGRAM_OWNER",
+    "allowed_datasets": ["client_program_mart", "merchant_mart"]
+  }
+}

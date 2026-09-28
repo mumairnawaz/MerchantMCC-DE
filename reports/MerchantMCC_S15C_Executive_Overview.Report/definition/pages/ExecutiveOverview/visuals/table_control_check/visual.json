@@ -1,0 +1,79 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "table_control_check",
+  "position": {
+    "x": 20,
+    "y": 440,
+    "width": 1240,
+    "height": 240,
+    "z": 0,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "settlement_mart"
+                    }
+                  },
+                  "Property": "currency_code"
+                }
+              },
+              "queryRef": "settlement_mart.currency_code",
+              "nativeQueryRef": "currency_code"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "settlement_mart"
+                    }
+                  },
+                  "Property": "Settlement Amount Total"
+                }
+              },
+              "queryRef": "settlement_mart.Settlement Amount Total",
+              "nativeQueryRef": "Settlement Amount Total"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "settlement_mart"
+                    }
+                  },
+                  "Property": "Settlement Fee Total"
+                }
+              },
+              "queryRef": "settlement_mart.Settlement Fee Total",
+              "nativeQueryRef": "Settlement Fee Total"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "settlement_mart"
+                    }
+                  },
+                  "Property": "Settlement Net Total"
+                }
+              },
+              "queryRef": "settlement_mart.Settlement Net Total",
+              "nativeQueryRef": "Settlement Net Total"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

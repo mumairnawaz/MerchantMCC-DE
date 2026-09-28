@@ -3,10 +3,22 @@ name = "merchantmcc-de"
 version = "0.1.0"
 description = "MerchantMCC DE — Merchant, MCC & Transaction Data Engineering Platform"
 requires-python = ">=3.12"
-dependencies = ["requests>=2.31"]
+dependencies = ["requests>=2.31", "pyarrow>=17.0", "psycopg[binary]>=3.1", "confluent-kafka>=2.5", "duckdb>=1.0", "dbt-core>=1.12", "dbt-duckdb>=1.11"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# S15-B Phase 2: dbt's second target (alongside the core "duckdb" target
+# above) for the Databricks SQL Warehouse/Unity Catalog path — see
+# docs/29-databricks-integration-plan.md. databricks-sdk is pinned
+# explicitly (not left to dbt-databricks' own transitive resolution)
+# because databricks-connect, if ever installed in this SAME environment,
+# force-upgrades it past dbt-databricks' supported range and silently
+# breaks this adapter — verified in this phase (docs/29 §7/§Phase-2).
+# Databricks Connect is deliberately NOT listed here — it belongs in a
+# separate, dedicated venv when PySpark authoring actually begins
+# (Phase 5+), pinned to whatever Databricks Runtime the real cluster
+# uses, which doesn't exist yet.
+databricks = ["dbt-databricks>=1.12", "databricks-sdk<0.118.0,>=0.68.0"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

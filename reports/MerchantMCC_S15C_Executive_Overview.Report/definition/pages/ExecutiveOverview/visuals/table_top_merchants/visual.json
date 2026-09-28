@@ -1,0 +1,51 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "table_top_merchants",
+  "position": {
+    "x": 980,
+    "y": 140,
+    "width": 280,
+    "height": 280,
+    "z": 0,
+    "tabOrder": 0
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "merchant_mart"
+                    }
+                  },
+                  "Property": "merchant_name"
+                }
+              },
+              "queryRef": "merchant_mart.merchant_name",
+              "nativeQueryRef": "merchant_name"
+            },
+            {
+              "field": {
+                "Measure": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "merchant_mart"
+                    }
+                  },
+                  "Property": "Merchant Approved Amount"
+                }
+              },
+              "queryRef": "merchant_mart.Merchant Approved Amount",
+              "nativeQueryRef": "Merchant Approved Amount"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

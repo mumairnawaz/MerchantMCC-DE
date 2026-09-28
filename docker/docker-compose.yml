@@ -1,8 +1,122 @@
+# MerchantMCC-DE's own Airflow deployment (infrastructure-provisioning
+# step only — no DAG exists yet, see docs/30 or the Airflow Orchestration
+# Audit report). Deliberately independent of any other Airflow deployment
+# on this machine: different compose project (this file), different
+# network (merchantmcc_net only), different metadata database
+# (airflow-postgres below, never merchantmcc_postgres — see §6 of the
+# provisioning task), different container names (merchantmcc_airflow_*).
+# LocalExecutor only — no Celery/Redis/workers: this is a local portfolio
+# project, and the pipeline's own stages (CDC Bronze/Silver/Gold/dbt) are
+# already each a single finite batch process, not something that benefits
+# from distributed task execution.
+#
+# IMPORTANT — same real pitfall this file already documented once for the
+# postgres healthcheck (see the S11 comment below): ${AIRFLOW_DB_USER} /
+# ${AIRFLOW_DB_PASSWORD} / ${AIRFLOW_DB_NAME} / ${AIRFLOW_FERNET_KEY} below
+# are COMPOSE-FILE-LEVEL interpolations, resolved from a .env file Compose
+# looks for in its own "project directory" (the invocation cwd, or the
+# directory of the first -f file) — NOT automatically the repo root.
+# Verified: running `docker compose config` from docker/ with no flags
+# leaves all four blank (Compose warns "variable is not set"); running
+# `docker compose --env-file ../.env config` from docker/ (or an
+# equivalent explicit --env-file from any other cwd) resolves them
+# correctly. Always pass --env-file ../.env (from docker/) or --env-file
+# .env (from the repo root) when running compose commands against this
+# file's Airflow services.
+x-airflow-common: &airflow-common
+  build:
+    context: ./airflow
+  image: merchantmcc-airflow:3.3.1-python3.12
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-postgres/${AIRFLOW_DB_NAME}"
+    AIRFLOW__CORE__FERNET_KEY: "${AIRFLOW_FERNET_KEY}"
+    # Real defect #2 found during first-execution testing: this MUST be
+    # identical across scheduler/dag-processor/apiserver (it signs/verifies
+    # the JWT each task uses to authenticate to the execution API below) —
+    # left unset, task launches failed with "ServerResponseError: Invalid
+    # auth token" even after the execution-API URL fix. See docs/ Airflow
+    # DAG implementation report for the full diagnosis.
+    AIRFLOW__API_AUTH__JWT_SECRET: "${AIRFLOW_JWT_SECRET}"
+    # dags/ is a subdirectory of the project root mounted below — no
+    # separate bind mount needed just for the DAG folder.
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/project/dags
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    # Real defect found and fixed during first-execution testing (DAG
+    # implementation step, not this file's original provisioning pass):
+    # Airflow 3.x's LocalExecutor task workers talk to the API server over
+    # HTTP (the new decoupled Task Execution API), defaulting to
+    # http://localhost:8080/execution/ — correct only when every component
+    # shares one container. Split across separate containers (as here),
+    # the scheduler's task workers got `httpcore.ConnectError: Connection
+    # refused` trying to reach "localhost" (themselves, not the apiserver
+    # container).
+    #
+    # First attempted fix (AIRFLOW__EXECUTION_API__EXECUTION_API_SERVER_URL,
+    # i.e. the [execution_api] section) was WRONG and silently ineffective:
+    # `airflow config get-value` happily echoed it back because Airflow's
+    # env-var override mechanism accepts any section/key pair without
+    # validating anything actually reads it — it kept failing identically
+    # (verified: 4 separate task attempts, same ConnectError, apiserver
+    # confirmed healthy throughout, zero incoming requests logged on its
+    # side). Traced to the real source
+    # (airflow/executors/base_executor.py::get_execution_api_server_url,
+    # installed inside this image): it reads
+    # conf.get("core", "execution_api_server_url", ...) — the [core]
+    # section, not [execution_api]. This is the variable that actually
+    # matters.
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-apiserver:8080/execution/
+    # So a future PythonOperator can `import src.cdc.consumer` etc. —
+    # mirrors pyproject.toml's `pythonpath = ["."]` for pytest, applied the
+    # same way here since there is no equivalent ini file for a plain
+    # `python`/Airflow task process.
+    PYTHONPATH: /opt/airflow/project
+    # Container-network service addresses (§9 of the provisioning task) —
+    # overrides ONLY inside this Airflow environment; src/cdc/consumer_config.py
+    # and src/oltp/config.py's own host-facing defaults (localhost:29092,
+    # localhost:55432) are untouched everywhere else in the project.
+    KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    # S15 login audit: SimpleAuthManager's default passwords file
+    # (AIRFLOW_HOME/simple_auth_manager_passwords.json.generated) lives in
+    # the apiserver container's own writable layer, not either bind mount
+    # below — lost on container recreation, and its one auto-generated
+    # password is unmemorable by design (16 random chars, see
+    # simple_auth_manager.py::_generate_password). Repointing it at a file
+    # under the already project-mounted path makes it survive recreation.
+    # SimpleAuthManager.init() only ever generates a password for a
+    # username NOT already present in this file — pre-seeding it (this
+    # project's docker/airflow/simple_auth_manager_passwords.json, real
+    # content gitignored, never committed) means the chosen password is
+    # used as-is, never overwritten.
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/project/docker/airflow/simple_auth_manager_passwords.json
+    # Explicit, not relied upon as an implicit upstream default (same
+    # username/role Airflow already defaulted to) — see S15 login audit.
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: admin:admin
+  volumes:
+    # The whole project root (source, dags/, dbt/, data/) — one mount,
+    # not a separate one per subdirectory ("do not create unnecessary
+    # abstraction"). .venv/ and .venv-spark/ are incidentally included
+    # (they're subdirectories of the project root) but are Windows/WSL-
+    # native and never referenced by anything in this Airflow environment.
+    - ..:/opt/airflow/project
+    - merchantmcc_airflow_logs:/opt/airflow/logs
+  networks:
+    - merchantmcc_net
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: merchantmcc_postgres
     env_file: ../.env
+    # S11: wal_level must be "logical" for Debezium's PostgreSQL connector to
+    # read the WAL via logical replication — the default "replica" does not
+    # carry enough information for CDC. max_replication_slots/max_wal_senders
+    # are already sufficient at their PostgreSQL defaults (10 each, one
+    # connector needs one of each); listed explicitly here only so the CDC
+    # requirement is self-documenting in this file. See docs/24 §5.
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=10", "-c", "max_wal_senders=10"]
     ports:
       - "${POSTGRES_PORT:-55432}:5432"
     volumes:
@@ -10,14 +124,175 @@ services:
     networks:
       - merchantmcc_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      # S11 fix: "$$POSTGRES_USER" (not "${POSTGRES_USER}") is deliberate — a
+      # bare ${POSTGRES_USER} is resolved by the `docker compose` CLI itself
+      # at compose-file-parse time, from whatever directory/`.env` context it
+      # was invoked in, which silently breaks (pg_isready -U <empty>, exit 3)
+      # unless compose happens to be run with this project's root .env
+      # resolvable in its project directory. "$$POSTGRES_USER" is escaped so
+      # compose passes a literal "$POSTGRES_USER" into the CMD-SHELL, which
+      # the container's own shell then expands from its own environment
+      # (already populated correctly by `env_file: ../.env` above,
+      # regardless of how docker compose itself was invoked) — robust
+      # regardless of invocation context. Found and fixed in S11 when this
+      # phase's own `docker compose up -d postgres` (run from docker/,
+      # exposing the pre-existing bug) needed a real healthy status for the
+      # new `connect` service's `depends_on: condition: service_healthy`.
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # S11: single-node Kafka broker in KRaft mode (no Zookeeper — Debezium's own
+  # container image supports this directly).
+  # S12 addition: a second, host-exposed "EXTERNAL" listener on 29092. S11
+  # deliberately kept Kafka internal-only (verification used `docker exec` +
+  # Kafka's own CLI, avoiding a Python client entirely). S12's own objective
+  # is a real Python Kafka consumer application (checkpointed offset control,
+  # not a one-off CLI read), which docker exec/kafka-console-consumer.sh
+  # cannot provide — a genuine, reported dependency decision (confluent-kafka;
+  # see docs/25 §4) that in turn requires the host to reach the broker. The
+  # internal "kafka:9092" listener Connect already uses is untouched; this
+  # adds a listener, not a replacement, avoiding the classic Docker
+  # advertised-listener trap (external clients must be advertised a host-
+  # reachable address, not the internal "kafka" hostname).
+  kafka:
+    image: quay.io/debezium/kafka:3.0.0.Final
+    container_name: merchantmcc_kafka
+    environment:
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      NODE_ID: 1
+      NODE_ROLE: combined
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+    ports:
+      - "29092:29092"
+    volumes:
+      - merchantmcc_kafka_data:/kafka/data
+    networks:
+      - merchantmcc_net
+    healthcheck:
+      test: ["CMD-SHELL", "/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  # S11: Kafka Connect, pre-bundled with the Debezium PostgreSQL connector.
+  # REST API (connector registration/status) exposed to the host on 8083 —
+  # plain HTTP, not the Kafka wire protocol, so no advertised-listener
+  # complications the way exposing the broker itself would have.
+  connect:
+    image: quay.io/debezium/connect:3.0.0.Final
+    container_name: merchantmcc_connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: finpay-connect
+      CONFIG_STORAGE_TOPIC: finpay_connect_configs
+      OFFSET_STORAGE_TOPIC: finpay_connect_offsets
+      STATUS_STORAGE_TOPIC: finpay_connect_statuses
+    ports:
+      - "8083:8083"
+    networks:
+      - merchantmcc_net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors > /dev/null"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+
+  # MerchantMCC-DE's own Airflow metadata database — internal
+  # scheduler/task-history store only, NEVER the application/OLTP
+  # database above (postgres/merchantmcc_postgres). Same postgres:16-alpine
+  # image family for consistency, but a fully separate instance/volume.
+  airflow-postgres:
+    image: postgres:16-alpine
+    container_name: merchantmcc_airflow_postgres
+    environment:
+      POSTGRES_USER: "${AIRFLOW_DB_USER}"
+      POSTGRES_PASSWORD: "${AIRFLOW_DB_PASSWORD}"
+      POSTGRES_DB: "${AIRFLOW_DB_NAME}"
+    volumes:
+      - merchantmcc_airflow_postgres_data:/var/lib/postgresql/data
+    networks:
+      - merchantmcc_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot: creates/migrates Airflow's metadata schema, then exits.
+  # Not a long-running service — scheduler/dag-processor/apiserver wait
+  # for it to exit successfully (service_completed_successfully) before
+  # starting.
+  airflow-init:
+    <<: *airflow-common
+    container_name: merchantmcc_airflow_init
+    command: ["db", "migrate"]
+    restart: "no"
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: merchantmcc_airflow_scheduler
+    command: ["scheduler"]
+    restart: unless-stopped
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  # Airflow 3.x's standalone DAG processor — a separate process from the
+  # scheduler (unlike pre-3.0 Airflow, where DAG parsing ran embedded in
+  # the scheduler process).
+  airflow-dag-processor:
+    <<: *airflow-common
+    container_name: merchantmcc_airflow_dag_processor
+    command: ["dag-processor"]
+    restart: unless-stopped
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
+  # Host port 8081 (not 8080): the OTHER, unrelated Airflow instance on
+  # this machine (fball-elites) uses 8080 internally — 8081 avoids any
+  # ambiguity even though that instance doesn't actually publish 8080 to
+  # the host.
+  airflow-apiserver:
+    <<: *airflow-common
+    container_name: merchantmcc_airflow_apiserver
+    command: ["api-server"]
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+
 volumes:
   merchantmcc_postgres_data:
     name: merchantmcc_postgres_data
+  merchantmcc_kafka_data:
+    name: merchantmcc_kafka_data
+  merchantmcc_airflow_postgres_data:
+    name: merchantmcc_airflow_postgres_data
+  merchantmcc_airflow_logs:
+    name: merchantmcc_airflow_logs
 
 networks:
   merchantmcc_net:
