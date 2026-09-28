@@ -136,7 +136,7 @@ Full diagram set — 18 diagrams including deployment/infrastructure, security b
 CDC event lifecycle, and consolidated data quality flow — plus 5 use-case diagrams:
 [`architecture/`](architecture/README.md).
 
-### Key technologies (full matrix in [§19](#19-technology--tool-stack))
+### Key technologies (full matrix in [§18](#18-technology--tool-stack))
 
 Python · PostgreSQL · Debezium · Kafka · PySpark · DuckDB · dbt · Apache Airflow ·
 Docker · Parquet · Power BI (PBIP/TMDL/PBIR)
@@ -167,6 +167,245 @@ the proof that it runs. Every path is a real, current path in this repository.
 "Implementation present; GUI evidence not captured" means exactly that — the code runs
 and is tested, but no GUI screenshot exists for that specific row. It is never used as a
 substitute for "implemented."
+
+## Engineering Evidence
+
+This repository includes GUI and execution evidence for the major components of the
+platform. The screenshots below are real repository evidence; illustrative assets are
+explicitly labeled where applicable. A screenshot demonstrates that a specific fact was
+true when it was captured — it is evidence for the row it's attached to, not a substitute
+for the code, which is linked separately under **Implementation** in every subsection.
+
+### PostgreSQL — OLTP Source System
+
+PostgreSQL acts as the synthetic FinPay OLTP/source system, holding the transaction and
+related fintech entities that feed CDC.
+
+![PostgreSQL schema and activity dashboard](docs/assets/screenshots/postgresql/01-postgresql-schema.png)
+
+**What this proves:**
+- the PostgreSQL source system is running and accessible via a real client (pgAdmin 4)
+- the `finpay` schema and its 11 tables exist with real, queryable data
+- the project uses PostgreSQL as the OLTP source, not a mocked/stubbed database
+
+**Implementation:** [`src/oltp/`](src/oltp/)
+
+<details>
+<summary>View additional PostgreSQL evidence</summary>
+
+![PostgreSQL analytical query](docs/assets/screenshots/postgresql/02-postgresql-analytical-query.png)
+
+A real ad hoc SQL query against `finpay.transactions`, run directly in pgAdmin's Query
+Tool — merchant-level transaction counts and approved/declined amounts.
+
+</details>
+
+### Kafka — CDC Event Transport
+
+Kafka is the CDC transport layer: Debezium publishes every PostgreSQL row change as an
+event on a per-table topic, which downstream CDC processing consumes.
+
+![Kafka topic browser](docs/assets/screenshots/kafka/01-kafka-topics.png)
+
+**What this proves:**
+- Kafka is running and reachable, with one real topic per source table
+- the `finpay.finpay.*` topics are Debezium-generated CDC event streams, not manually
+  created topics
+- two live consumer instances (`finpay-cdc-bronze-consumer`) are attached and reading
+
+**Implementation:** [`src/cdc/consumer.py`](src/cdc/consumer.py), CDC connector
+configuration in [`docker/docker-compose.yml`](docker/docker-compose.yml)
+
+<details>
+<summary>View additional Kafka evidence</summary>
+
+![finpay.finpay.transactions live messages](docs/assets/screenshots/kafka/finpay.finpay.transactions.png)
+
+50 real Debezium change-event messages on the `finpay.finpay.transactions` topic, with
+real offsets and timestamps — proof that row-level changes are actually reaching Kafka,
+not just that the topic exists.
+
+</details>
+
+### Debezium — Change Data Capture
+
+PostgreSQL changes are captured through Debezium and published into Kafka before
+downstream CDC Bronze/Silver processing.
+
+**Implementation verified; GUI screenshot not currently captured.** The Kafka topic
+browser above (a Kafka GUI, not a Debezium-specific one) shows the topics Debezium
+creates and populates, but no screenshot of Debezium's own connector-status page exists in
+this repository. The connector's `RUNNING` state is instead documented as real CLI
+evidence: [`docs/assets/screenshots/cdc/`](docs/assets/screenshots/cdc/).
+
+**Implementation:** connector configuration in [`docker/docker-compose.yml`](docker/docker-compose.yml),
+consumer/checkpoint logic in [`src/cdc/`](src/cdc/)
+
+### Apache Airflow — Pipeline Orchestration
+
+Airflow orchestrates the project's scheduled CDC, API ingestion, and client delivery
+workflows, each on its own independently justified schedule.
+
+![Airflow DAG overview](docs/assets/screenshots/airflow/01-dag-overview.png)
+
+**What this proves:**
+- all 3 DAGs (`merchantmcc_api_pipeline`, `merchantmcc_cdc_pipeline`,
+  `merchantmcc_client_delivery`) are registered and unpaused
+- their real schedules — `0 2 * * *`, `*/15 * * * *`, `0 6 * * *` — as configured in the
+  DAG files, not just as documented here
+- the most recent runs completed successfully
+
+**Implementation:** [`dags/merchantmcc_cdc_pipeline.py`](dags/merchantmcc_cdc_pipeline.py),
+[`merchantmcc_api_pipeline.py`](dags/merchantmcc_api_pipeline.py),
+[`merchantmcc_client_delivery.py`](dags/merchantmcc_client_delivery.py)
+
+<details>
+<summary>View additional Airflow evidence</summary>
+
+![CDC DAG graph](docs/assets/screenshots/airflow/02-cdc-dag-graph.png)
+
+`cdc_bronze → cdc_silver → gold_rebuild → dbt_build`, task grid over the last 24 hours.
+
+![CDC DAG run history](docs/assets/screenshots/airflow/03-cdc-dag-grid.png)
+
+Consecutive scheduled runs on the `*/15 * * * *` cadence, all `Success`.
+
+![API DAG graph](docs/assets/screenshots/airflow/04-api-dag-graph.png)
+
+The six per-source Bronze/Silver ingestion tasks, zero failed tasks in the last 24 hours.
+
+![Client delivery DAG graph](docs/assets/screenshots/airflow/05-client-delivery-dag-graph.png)
+
+`validate_marts → generate_client_extracts → validate_deliveries`, zero failed tasks.
+
+</details>
+
+### dbt — Transformation & Data Modeling
+
+The dbt layer transforms Gold source relations through staging and intermediate models
+into analytical/stakeholder marts, and applies data tests/assertions on every build.
+
+![dbt lineage graph](docs/assets/screenshots/dbt/dbt-lineage.png)
+
+**What this proves:**
+- the full, real model DAG: 18 Gold source relations → 18 staging models → 4 intermediate
+  enrichment models → 6 marts → the `assert_control_total_identity` test
+- the transformation layer is a real, generated dbt docs site, not a description
+
+**Implementation:** [`dbt/models/`](dbt/models/) ·
+[`dbt/tests/assert_control_total_identity.sql`](dbt/tests/assert_control_total_identity.sql)
+
+<details>
+<summary>View additional dbt evidence</summary>
+
+![dbt model detail for transaction_mart](docs/assets/screenshots/dbt/dbt-model-detail.png)
+
+The generated docs site's detail page for `marts.transaction_mart` — real relation name,
+materialization, and column list.
+
+A real `dbt build` run is also captured as CLI evidence, final line:
+`Done. PASS=73 WARN=0 ERROR=0 SKIP=0 NO-OP=0 REUSED=0 TOTAL=73` —
+[`docs/assets/screenshots/dbt/dbt_build_output.txt`](docs/assets/screenshots/dbt/dbt_build_output.txt).
+
+</details>
+
+### Docker — Local Data Engineering Infrastructure
+
+Docker provides the local infrastructure for PostgreSQL, Kafka, Debezium Connect, and
+Airflow — nothing in this platform depends on a cloud service.
+
+![Docker Desktop container list](docs/assets/screenshots/docker/01-docker-containers.png)
+
+**What this proves:**
+- 7 real MerchantMCC containers, all healthy: `merchantmcc_postgres`, `merchantmcc_kafka`,
+  `merchantmcc_connect` (Debezium), and 4 Airflow 3 components (including a separate
+  metadata-only Postgres instance for Airflow itself)
+- the platform actually runs as a set of orchestrated local containers, not a diagram
+
+**Implementation:** [`docker/docker-compose.yml`](docker/docker-compose.yml)
+
+### Power BI — Analytical Consumption
+
+**Illustrative Power BI portfolio mockup — not a verified Power BI Desktop rendering.**
+
+![MCC Details Dashboard mockup](docs/assets/screenshots/powerbi/01-mcc-details-dashboard.png)
+
+Power BI represents the platform's internal analytical consumption layer, built around
+MerchantMCC's Gold/dbt marts:
+
+```
+Gold / dbt marts  →  Power BI  →  internal analytics
+Gold / dbt marts  →  Client Data Delivery  →  CSV / Parquet  →  client / stakeholder consumption
+```
+
+These are two separate channels — Power BI is never the mechanism by which data actually
+leaves the platform; Client Data Delivery (below) is.
+
+**What this image is, and is not:** it is a hand-built illustrative mockup showing the
+intended dashboard layout and analytical areas. It is **not** a screenshot of Power BI
+Desktop, and its on-image figures (e.g. "1,248,392 transactions", "$18,642,903") are
+illustrative/synthetic — they do not match this project's real, verified data (4,000
+transactions, a £435,106.16 control total). The real PBIP project — 5 dbt marts, 16 DAX
+measures, 4 report pages, 24 visuals, schema-validated — exists at
+[`reports/MerchantMCC_S15C_Executive_Overview.pbip`](reports/MerchantMCC_S15C_Executive_Overview.pbip),
+but its Desktop rendering has not yet been physically confirmed.
+
+**Implementation:** [`reports/MerchantMCC_S15C_Executive_Overview.pbip`](reports/MerchantMCC_S15C_Executive_Overview.pbip) ·
+analytical marts in [`dbt/models/marts/`](dbt/models/marts/)
+
+<details>
+<summary>View additional Power BI evidence</summary>
+
+![Transaction Analysis Dashboard mockup](docs/assets/screenshots/powerbi/02-transaction-analysis-dashboard.png)
+
+A second illustrative mockup — same caveats as above. A separate mockup built from this
+project's real mart/measure names and real control totals (rather than illustrative
+figures) is available at [`docs/assets/screenshots/powerbi/ILLUSTRATIVE-MOCKUP.md`](docs/assets/screenshots/powerbi/ILLUSTRATIVE-MOCKUP.md).
+
+</details>
+
+### PySpark — Data Processing Track
+
+An independent PySpark engineering track — its own Bronze → Silver → Gold → Consumption
+pipeline, sharing no code or data with the primary Gold warehouse above.
+
+**Implementation verified; execution evidence not currently captured as a screenshot.**
+The real, reproducible run numbers (1,010 Bronze records → 875 valid + 135 rejected,
+fully reconciled) are documented as CLI evidence:
+[`docs/assets/screenshots/spark/`](docs/assets/screenshots/spark/).
+
+**Implementation:** [`src/spark/bronze_to_silver.py`](src/spark/bronze_to_silver.py),
+[`silver_to_gold.py`](src/spark/silver_to_gold.py),
+[`gold_to_consumption.py`](src/spark/gold_to_consumption.py)
+
+### Client Data Delivery
+
+A governed, file-based delivery layer: per-client entitlements, dataset validation,
+control-total reconciliation, and a manifest, before anything is written to the outbox.
+
+**Implementation verified; GUI screenshot not applicable (file-based output, not a GUI
+tool).** The real `outbox/` structure and a real manifest are documented as CLI evidence:
+[`docs/assets/screenshots/client-delivery/`](docs/assets/screenshots/client-delivery/).
+
+**Implementation:** [`src/delivery/pipeline.py`](src/delivery/pipeline.py) ·
+[`configs/delivery_datasets.json`](configs/delivery_datasets.json) ·
+[`configs/client_entitlements.json`](configs/client_entitlements.json)
+
+### Data Quality & Testing
+
+Reconciliation, control totals, idempotency, schema validation, and automated tests run
+at every layer of the platform, not just at the end.
+
+**Implementation verified; GUI screenshot not applicable (these are CLI/test-runner
+outputs, not a GUI tool).** The £435,106.16 control-total identity, independently
+re-proven at 3 separate layers, and the real test-suite counts (760 collected; the
+isolated Client Delivery suite at 25/25) are documented as CLI evidence:
+[`docs/assets/screenshots/data-quality/`](docs/assets/screenshots/data-quality/) ·
+[`docs/assets/screenshots/testing/`](docs/assets/screenshots/testing/).
+
+**Implementation:** [`src/gold/reconciliation.py`](src/gold/reconciliation.py) ·
+[`dbt/tests/assert_control_total_identity.sql`](dbt/tests/assert_control_total_identity.sql) ·
+[`tests/`](tests/)
 
 ## 5. Data Engineering Pipeline
 
@@ -355,7 +594,7 @@ safely skipped, never silently overwritten.
 Implemented datasets: `transaction_mart` (CSV + Parquet) · `settlement_mart` (CSV) ·
 `reconciliation_mart` (CSV) · `merchant_mart` (Parquet) · `client_program_mart` (Parquet,
 row-filtered per client). **Current delivery destination is a local `outbox/` directory
-only** — see [20. Current Limitations](#20-current-limitations).
+only** — see [19. Current Limitations](#19-current-limitations).
 
 ## 15. Power BI
 
@@ -379,104 +618,11 @@ structure and semantic references are schema-validated, and the ODBC data connec
 independently validated. **Final Power BI Desktop rendering verification remains a manual
 step** — recorded accurately, not as a broken feature.
 
-### Illustrative dashboard mockups
+Illustrative dashboard mockups, the real dbt marts and control totals they're built from,
+and the honest rendering-verification status are all shown together in
+[Engineering Evidence → Power BI](#engineering-evidence) below.
 
-<details>
-<summary><strong>Power BI — illustrative dashboard mockups (click to expand)</strong></summary>
-
-![MCC Details Dashboard mockup](docs/assets/screenshots/powerbi/01-mcc-details-dashboard.png)
-![Transaction Analysis Dashboard mockup](docs/assets/screenshots/powerbi/02-transaction-analysis-dashboard.png)
-
-**These are illustrative portfolio mockups, not screenshots of Power BI Desktop.** They
-show the intended visual style and analytical areas — transaction volume/amount trends,
-merchant and MCC analysis, issuer/network performance, program/campaign performance,
-reconciliation, rewards, and geographic breakdown — but the specific figures on them
-(e.g. "1,248,392 transactions", "$18,642,903") are illustrative/synthetic values used to
-demonstrate layout, and **do not match this project's real, verified data.** The
-project's actual control values are 4,000 transactions and a £435,106.16 control total
-(§10). A second mockup built from these real figures and the real mart/measure names is
-available at [`docs/assets/screenshots/powerbi/ILLUSTRATIVE-MOCKUP.md`](docs/assets/screenshots/powerbi/ILLUSTRATIVE-MOCKUP.md).
-
-</details>
-
-Full status and manual screenshot checklist: [`docs/assets/screenshots/powerbi/`](docs/assets/screenshots/powerbi/).
-
-## 16. Evidence Gallery
-
-Real, reproducible evidence, organized by area — no fabricated screenshots. Airflow,
-Kafka, PostgreSQL, and dbt below include real, manually-captured GUI screenshots. Where a
-GUI tool exists but capturing it safely wasn't practical in a given session, that's stated
-explicitly and real CLI evidence is used instead. Full policy and index:
-[`docs/assets/screenshots/`](docs/assets/screenshots/).
-
-<details>
-<summary><strong>Airflow</strong> — 3 DAGs unpaused, CDC/API/delivery task grids all green</summary>
-
-![Airflow DAG overview](docs/assets/screenshots/airflow/01-dag-overview.png)
-
-All 3 DAGs (`merchantmcc_api_pipeline`, `merchantmcc_cdc_pipeline`,
-`merchantmcc_client_delivery`), each on its own schedule, unpaused. Full set of 5
-screenshots (DAG overview, CDC graph/grid, API graph, delivery graph):
-[`docs/assets/screenshots/airflow/`](docs/assets/screenshots/airflow/).
-
-</details>
-
-<details>
-<summary><strong>Kafka</strong> — real Debezium CDC topics and live transaction messages</summary>
-
-![Kafka topic browser](docs/assets/screenshots/kafka/01-kafka-topics.png)
-
-Every `finpay.finpay.*` topic is a real table Debezium streams from PostgreSQL. Full set
-(topic browser + live message payloads):
-[`docs/assets/screenshots/kafka/`](docs/assets/screenshots/kafka/).
-
-</details>
-
-<details>
-<summary><strong>PostgreSQL</strong> — the 11-table synthetic OLTP schema and a live query</summary>
-
-![PostgreSQL schema and activity dashboard](docs/assets/screenshots/postgresql/01-postgresql-schema.png)
-
-The `finpay` schema in pgAdmin 4, alongside a live server activity dashboard. Full set
-(schema browser + analytical query):
-[`docs/assets/screenshots/postgresql/`](docs/assets/screenshots/postgresql/).
-
-</details>
-
-<details>
-<summary><strong>dbt</strong> — model lineage graph and a real 73/73 build</summary>
-
-![dbt lineage graph](docs/assets/screenshots/dbt/dbt-lineage.png)
-
-The full model DAG: Gold source relations → staging → intermediate enrichment → marts →
-the control-total identity test. Full set (lineage graph + model detail + real
-`dbt build` output): [`docs/assets/screenshots/dbt/`](docs/assets/screenshots/dbt/).
-
-</details>
-
-<details>
-<summary><strong>Docker</strong> — 7 healthy MerchantMCC containers</summary>
-
-![Docker Desktop container list](docs/assets/screenshots/docker/01-docker-containers.png)
-
-Debezium, both PostgreSQL instances (application + Airflow metadata), Kafka, and 3
-Airflow 3 components, all healthy:
-[`docs/assets/screenshots/docker/`](docs/assets/screenshots/docker/).
-
-</details>
-
-| Area | What it proves |
-|---|---|
-| [DuckDB](docs/assets/screenshots/duckdb/) | CLI evidence: the real 25-table Gold schema, live control-total query |
-| [API ingestion](docs/assets/screenshots/api/) | CLI evidence: real Bronze metadata/watermarks |
-| [CDC](docs/assets/screenshots/cdc/) | CLI evidence: a real checkpoint file, zero lag |
-| [Spark](docs/assets/screenshots/spark/) | CLI evidence: real 1,010 → 875 valid + 135 rejected |
-| [Client Delivery](docs/assets/screenshots/client-delivery/) | CLI evidence: real `outbox/` + manifest |
-| [Data Quality](docs/assets/screenshots/data-quality/) | CLI evidence: the £435,106.16 identity, 3-layer re-proof |
-| [Testing](docs/assets/screenshots/testing/) | CLI evidence: real test counts, 25/25 delivery suite |
-| [Power BI](docs/assets/screenshots/powerbi/) | Illustrative mockups (above) + honest rendering status |
-
-## 17. Testing
+## 16. Testing
 
 **760 tests collected.** Most recently observed complete run: **758 passed, 2 transient
 timeout failures (traced to a host-suspend event, both re-confirmed passing
@@ -484,7 +630,7 @@ individually), 3 skipped**. Client Data Delivery has its own isolated suite, ind
 confirmed at **25/25 passing**. This is reported as the verified evidence available — not
 a claim that every test has passed in one single, uninterrupted final run.
 
-## 18. Security
+## 17. Security
 
 `.env` and Airflow's local password file are gitignored and were never committed; all
 credentials are supplied via environment variables, never hardcoded; `.env.example`
@@ -492,7 +638,7 @@ documents variable *names* only; none of the three live APIs require a key; a de
 repository and git-history audit found no committed secrets. Boundary diagram:
 [`architecture/diagrams/17-security-boundary.md`](architecture/diagrams/17-security-boundary.md).
 
-## 19. Technology / Tool Stack
+## 18. Technology / Tool Stack
 
 | Technology | Role | Status | Evidence |
 |---|---|---|---|
@@ -512,7 +658,7 @@ repository and git-history audit found no committed secrets. Boundary diagram:
 | GitHub | Version control / publication | Implemented | this repository |
 | Trino | OLAP query engine alternative | **Considered, not implemented** | listed only in "out of scope" design-doc sections |
 
-## 20. Current Limitations
+## 19. Current Limitations
 
 - Power BI Desktop rendering has not been physically confirmed (structure is
   schema-validated and the data connection independently proven; see [§15](#15-power-bi)).
@@ -523,9 +669,9 @@ repository and git-history audit found no committed secrets. Boundary diagram:
 - No automated data-lineage tool is wired in — lineage metadata is captured at every
   Bronze write, but there is no OpenLineage/Marquez-style UI ([diagram](architecture/diagrams/14-data-lineage.md)).
 - The full 760-test suite's most recent single uninterrupted run had 2 transient failures
-  from a host-suspend event, not a code defect (see [§17](#17-testing)).
+  from a host-suspend event, not a code defect (see [§16](#16-testing)).
 
-## 21. Future Extensions
+## 20. Future Extensions
 
 Documented, not implemented, and not claimed as existing: real transport for Client Data
 Delivery (SFTP/email/API/cloud), Power BI Service publication, a lineage platform
